@@ -8,6 +8,7 @@ import express, { Request, Response } from 'express';
 const server = express();
 
 let appPromise: Promise<void> | null = null;
+let swaggerDocument: object | null = null;
 
 const createNestServer = async (expressInstance: express.Express) => {
   const app = await NestFactory.create(
@@ -47,8 +48,45 @@ const createNestServer = async (expressInstance: express.Express) => {
     .addTag('automation', 'Endpoints para automações externas')
     .build();
 
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('docs', app, document);
+  swaggerDocument = SwaggerModule.createDocument(app, config);
+
+  // Endpoint para o JSON do Swagger
+  expressInstance.get('/api/docs/swagger.json', (_req, res) => {
+    res.json(swaggerDocument);
+  });
+
+  // Endpoint para o Swagger UI com CDN
+  expressInstance.get('/api/docs', (_req, res) => {
+    res.send(`
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aviva Nações API - Documentação</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui.min.css" />
+</head>
+<body>
+  <div id="swagger-ui"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui-bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui-standalone-preset.min.js"></script>
+  <script>
+    window.onload = function() {
+      SwaggerUIBundle({
+        url: '/api/docs/swagger.json',
+        dom_id: '#swagger-ui',
+        presets: [
+          SwaggerUIBundle.presets.apis,
+          SwaggerUIStandalonePreset
+        ],
+        layout: 'StandaloneLayout'
+      });
+    };
+  </script>
+</body>
+</html>
+    `);
+  });
 
   await app.init();
 };

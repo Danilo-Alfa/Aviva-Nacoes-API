@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir /s \"c:\\Users\\danilo.henrique\\Documents\\projetos\\pessoais\\avivanacoes\\aviva-nacoes-api\\src\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
