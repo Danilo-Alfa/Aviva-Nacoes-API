@@ -14,9 +14,20 @@ describe('AppController', () => {
     appController = app.get<AppController>(AppController);
   });
 
-  describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+  describe('getInfo', () => {
+    it('should return API info', () => {
+      const result = appController.getInfo();
+      expect(result).toHaveProperty('name', 'Aviva Nações API');
+      expect(result).toHaveProperty('version', '1.0.0');
+    });
+  });
+
+  describe('healthCheck', () => {
+    it('should return health status', () => {
+      const result = appController.healthCheck();
+      expect(result).toHaveProperty('status', 'ok');
+      expect(result).toHaveProperty('timestamp');
+      expect(result).toHaveProperty('uptime');
     });
   });
 });
