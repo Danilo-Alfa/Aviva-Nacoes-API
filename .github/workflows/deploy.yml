@@ -55,48 +55,13 @@ jobs:
       - name: Build
         run: ./node_modules/.bin/nest build
 
-      # =============================================
-      # OPÇÃO 1: Deploy para Railway
-      # =============================================
-      # - name: Deploy to Railway
-      #   uses: bervProject/railway-deploy@main
-      #   with:
-      #     railway_token: ${{ secrets.RAILWAY_TOKEN }}
-      #     service: ${{ secrets.RAILWAY_SERVICE }}
-
-      # =============================================
-      # OPÇÃO 2: Deploy para Render
-      # =============================================
-      # - name: Deploy to Render
-      #   run: |
-      #     curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
-
-      # =============================================
-      # OPÇÃO 3: Deploy para VPS via SSH
-      # =============================================
-      # - name: Deploy to VPS
-      #   uses: appleboy/ssh-action@v1.0.3
-      #   with:
-      #     host: ${{ secrets.VPS_HOST }}
-      #     username: ${{ secrets.VPS_USERNAME }}
-      #     key: ${{ secrets.VPS_SSH_KEY }}
-      #     script: |
-      #       cd /var/www/aviva-nacoes-api
-      #       git pull origin main
-      #       npm ci
-      #       npm run build
-      #       pm2 restart aviva-nacoes-api
-
-      # =============================================
-      # OPÇÃO 4: Deploy para Vercel
-      # =============================================
-      # - name: Deploy to Vercel
-      #   uses: amondnet/vercel-action@v25
-      #   with:
-      #     vercel-token: ${{ secrets.VERCEL_TOKEN }}
-      #     vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-      #     vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-      #     vercel-args: '--prod'
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
 
 env:
   PORT: ${{ secrets.PORT }}
