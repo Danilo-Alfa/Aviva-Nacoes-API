@@ -32,7 +32,10 @@ async function bootstrap() {
       )
       .setVersion('1.0')
       .addApiKey({ type: 'apiKey', name: 'x-api-key', in: 'header' }, 'api-key')
-      .addApiKey({ type: 'apiKey', name: 'x-admin-password', in: 'header' }, 'admin-password')
+      .addApiKey(
+        { type: 'apiKey', name: 'x-admin-password', in: 'header' },
+        'admin-password',
+      )
       .addTag('live', 'Endpoints para gerenciamento da transmissão ao vivo')
       .addTag('chat', 'Endpoints para chat da live')
       .addTag('viewers', 'Endpoints para gerenciamento de viewers')

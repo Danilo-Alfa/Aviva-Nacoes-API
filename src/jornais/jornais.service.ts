@@ -12,7 +12,8 @@ export class JornaisService {
   async criar(url: string, titulo?: string) {
     const hoje = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
-    const { data, error } = await this.supabase.getClient()
+    const { data, error } = await this.supabase
+      .getClient()
       .from('jornais')
       .insert({
         url_pdf: url,
@@ -33,7 +34,8 @@ export class JornaisService {
    * Busca os últimos jornais (para página pública)
    */
   async getUltimos(limit: number = 5) {
-    const { data, error } = await this.supabase.getClient()
+    const { data, error } = await this.supabase
+      .getClient()
       .from('jornais')
       .select('*')
       .order('data', { ascending: false })
@@ -50,7 +52,8 @@ export class JornaisService {
    * Busca todos os jornais (para admin)
    */
   async getTodos() {
-    const { data, error } = await this.supabase.getClient()
+    const { data, error } = await this.supabase
+      .getClient()
       .from('jornais')
       .select('*')
       .order('data', { ascending: false });
@@ -65,8 +68,14 @@ export class JornaisService {
   /**
    * Atualiza um jornal
    */
-  async atualizar(id: string, urlPdf: string, titulo: string | null, dataJornal: string) {
-    const { data, error } = await this.supabase.getClient()
+  async atualizar(
+    id: string,
+    urlPdf: string,
+    titulo: string | null,
+    dataJornal: string,
+  ) {
+    const { data, error } = await this.supabase
+      .getClient()
       .from('jornais')
       .update({
         url_pdf: urlPdf,
@@ -88,7 +97,8 @@ export class JornaisService {
    * Deleta um jornal
    */
   async deletar(id: string) {
-    const { error } = await this.supabase.getClient()
+    const { error } = await this.supabase
+      .getClient()
       .from('jornais')
       .delete()
       .eq('id', id);

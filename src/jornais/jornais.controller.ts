@@ -18,7 +18,11 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { JornaisService } from './jornais.service';
-import { CriarJornalDto, AtualizarJornalDto, JornalDto } from './dto/jornal.dto';
+import {
+  CriarJornalDto,
+  AtualizarJornalDto,
+  JornalDto,
+} from './dto/jornal.dto';
 import { RequireApiKey } from '../auth/decorators/api-key.decorator';
 import { RequireAdmin } from '../auth/decorators/admin.decorator';
 
@@ -41,7 +45,11 @@ export class JornaisController {
 
   @Get('ultimos')
   @ApiOperation({ summary: 'Busca os últimos jornais (página pública)' })
-  @ApiQuery({ name: 'limit', required: false, description: 'Limite de resultados (padrão: 5)' })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Limite de resultados (padrão: 5)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Lista dos últimos jornais',
@@ -73,11 +81,13 @@ export class JornaisController {
     description: 'Jornal atualizado',
     type: JornalDto,
   })
-  async atualizar(
-    @Param('id') id: string,
-    @Body() body: AtualizarJornalDto,
-  ) {
-    return this.jornaisService.atualizar(id, body.url_pdf, body.titulo || null, body.data);
+  async atualizar(@Param('id') id: string, @Body() body: AtualizarJornalDto) {
+    return this.jornaisService.atualizar(
+      id,
+      body.url_pdf,
+      body.titulo || null,
+      body.data,
+    );
   }
 
   @Delete(':id')

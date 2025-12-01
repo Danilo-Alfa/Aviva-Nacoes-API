@@ -64,35 +64,35 @@ Com o servidor rodando, acesse:
 
 ### Live
 
-| Método | Endpoint | Descrição | Autenticação |
-|--------|----------|-----------|--------------|
-| GET | `/api/live/config` | Busca configuração da live | - |
-| GET | `/api/live/status` | Status atual da live | - |
-| PATCH | `/api/live/config` | Atualiza configuração | Admin |
-| POST | `/api/live/iniciar` | Inicia a live | API Key |
-| POST | `/api/live/parar` | Para a live | API Key |
+| Método | Endpoint            | Descrição                  | Autenticação |
+| ------ | ------------------- | -------------------------- | ------------ |
+| GET    | `/api/live/config`  | Busca configuração da live | -            |
+| GET    | `/api/live/status`  | Status atual da live       | -            |
+| PATCH  | `/api/live/config`  | Atualiza configuração      | Admin        |
+| POST   | `/api/live/iniciar` | Inicia a live              | API Key      |
+| POST   | `/api/live/parar`   | Para a live                | API Key      |
 
 ### Chat
 
-| Método | Endpoint | Descrição | Autenticação |
-|--------|----------|-----------|--------------|
-| GET | `/api/chat/mensagens` | Últimas mensagens | - |
-| GET | `/api/chat/estatisticas` | Estatísticas do chat | - |
-| DELETE | `/api/chat/mensagem/:id` | Deleta mensagem | Admin |
-| POST | `/api/chat/limpar` | Limpa todo o chat | API Key |
+| Método | Endpoint                 | Descrição            | Autenticação |
+| ------ | ------------------------ | -------------------- | ------------ |
+| GET    | `/api/chat/mensagens`    | Últimas mensagens    | -            |
+| GET    | `/api/chat/estatisticas` | Estatísticas do chat | -            |
+| DELETE | `/api/chat/mensagem/:id` | Deleta mensagem      | Admin        |
+| POST   | `/api/chat/limpar`       | Limpa todo o chat    | API Key      |
 
 ### Viewers
 
-| Método | Endpoint | Descrição | Autenticação |
-|--------|----------|-----------|--------------|
-| POST | `/api/viewers/registrar` | Registra viewer | - |
-| POST | `/api/viewers/heartbeat` | Atualiza heartbeat | - |
-| POST | `/api/viewers/sair` | Marca saída | - |
-| GET | `/api/viewers/contagem` | Contagem de viewers | - |
-| GET | `/api/viewers/ativos` | Lista viewers ativos | Admin |
-| GET | `/api/viewers/todos` | Lista todos viewers | Admin |
-| GET | `/api/viewers/estatisticas` | Estatísticas | - |
-| DELETE | `/api/viewers/inativos` | Remove inativos | API Key |
+| Método | Endpoint                    | Descrição            | Autenticação |
+| ------ | --------------------------- | -------------------- | ------------ |
+| POST   | `/api/viewers/registrar`    | Registra viewer      | -            |
+| POST   | `/api/viewers/heartbeat`    | Atualiza heartbeat   | -            |
+| POST   | `/api/viewers/sair`         | Marca saída          | -            |
+| GET    | `/api/viewers/contagem`     | Contagem de viewers  | -            |
+| GET    | `/api/viewers/ativos`       | Lista viewers ativos | Admin        |
+| GET    | `/api/viewers/todos`        | Lista todos viewers  | Admin        |
+| GET    | `/api/viewers/estatisticas` | Estatísticas         | -            |
+| DELETE | `/api/viewers/inativos`     | Remove inativos      | API Key      |
 
 ## WebSocket (Chat)
 
@@ -120,6 +120,7 @@ socket.on('users_online', (count) => console.log(count));
 Header: `x-api-key: sua_api_key`
 
 Exemplo:
+
 ```bash
 curl -X POST http://localhost:3001/api/live/iniciar \
   -H "x-api-key: sua_api_key" \

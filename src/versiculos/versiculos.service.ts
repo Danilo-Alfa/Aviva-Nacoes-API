@@ -12,7 +12,8 @@ export class VersiculosService {
   async criar(url: string) {
     const hoje = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
-    const { data, error } = await this.supabase.getClient()
+    const { data, error } = await this.supabase
+      .getClient()
       .from('versiculos')
       .insert({
         url_post: url,
@@ -34,7 +35,8 @@ export class VersiculosService {
    * Busca o versículo do dia (mais recente ativo)
    */
   async getVersiculoDoDia() {
-    const { data, error } = await this.supabase.getClient()
+    const { data, error } = await this.supabase
+      .getClient()
       .from('versiculos')
       .select('*')
       .eq('ativo', true)
@@ -53,7 +55,8 @@ export class VersiculosService {
    * Busca versículos anteriores (exceto o mais recente)
    */
   async getVersiculosAnteriores(limit: number = 6) {
-    const { data, error } = await this.supabase.getClient()
+    const { data, error } = await this.supabase
+      .getClient()
       .from('versiculos')
       .select('*')
       .eq('ativo', true)
@@ -71,7 +74,8 @@ export class VersiculosService {
    * Busca todos os versículos (para admin)
    */
   async getTodos() {
-    const { data, error } = await this.supabase.getClient()
+    const { data, error } = await this.supabase
+      .getClient()
       .from('versiculos')
       .select('*')
       .order('data', { ascending: false });
@@ -86,8 +90,14 @@ export class VersiculosService {
   /**
    * Atualiza um versículo
    */
-  async atualizar(id: string, urlPost: string, titulo: string | null, dataVersiculo: string) {
-    const { data, error } = await this.supabase.getClient()
+  async atualizar(
+    id: string,
+    urlPost: string,
+    titulo: string | null,
+    dataVersiculo: string,
+  ) {
+    const { data, error } = await this.supabase
+      .getClient()
       .from('versiculos')
       .update({
         url_post: urlPost,
@@ -109,7 +119,8 @@ export class VersiculosService {
    * Deleta um versículo
    */
   async deletar(id: string) {
-    const { error } = await this.supabase.getClient()
+    const { error } = await this.supabase
+      .getClient()
       .from('versiculos')
       .delete()
       .eq('id', id);
@@ -125,7 +136,8 @@ export class VersiculosService {
    * Ativa/desativa um versículo
    */
   async toggleAtivo(id: string, ativo: boolean) {
-    const { data, error } = await this.supabase.getClient()
+    const { data, error } = await this.supabase
+      .getClient()
       .from('versiculos')
       .update({ ativo })
       .eq('id', id)

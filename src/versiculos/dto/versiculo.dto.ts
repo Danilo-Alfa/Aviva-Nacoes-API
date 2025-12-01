@@ -1,10 +1,17 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsUrl, IsOptional, IsString, IsBoolean, IsDateString } from 'class-validator';
+import {
+  IsUrl,
+  IsOptional,
+  IsString,
+  IsBoolean,
+  IsDateString,
+} from 'class-validator';
 
 export class CriarVersiculoDto {
   @ApiProperty({
     description: 'URL do post do Facebook com o versículo',
-    example: 'https://www.facebook.com/photo?fbid=25344157145195700&set=a.292699170768177',
+    example:
+      'https://www.facebook.com/photo?fbid=25344157145195700&set=a.292699170768177',
   })
   @IsUrl()
   url: string;

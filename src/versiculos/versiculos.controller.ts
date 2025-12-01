@@ -51,7 +51,11 @@ export class VersiculosController {
 
   @Get('anteriores')
   @ApiOperation({ summary: 'Busca versículos anteriores' })
-  @ApiQuery({ name: 'limit', required: false, description: 'Limite de resultados (padrão: 6)' })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Limite de resultados (padrão: 6)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Lista de versículos anteriores',
@@ -87,7 +91,12 @@ export class VersiculosController {
     @Param('id') id: string,
     @Body() body: { url_post: string; titulo: string | null; data: string },
   ) {
-    return this.versiculosService.atualizar(id, body.url_post, body.titulo, body.data);
+    return this.versiculosService.atualizar(
+      id,
+      body.url_post,
+      body.titulo,
+      body.data,
+    );
   }
 
   @Patch(':id/toggle')
@@ -99,10 +108,7 @@ export class VersiculosController {
     description: 'Status atualizado',
     type: VersiculoDto,
   })
-  async toggleAtivo(
-    @Param('id') id: string,
-    @Body() body: { ativo: boolean },
-  ) {
+  async toggleAtivo(@Param('id') id: string, @Body() body: { ativo: boolean }) {
     return this.versiculosService.toggleAtivo(id, body.ativo);
   }
 

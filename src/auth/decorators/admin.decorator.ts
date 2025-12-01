@@ -3,8 +3,5 @@ import { ApiSecurity } from '@nestjs/swagger';
 import { AdminGuard } from '../guards/admin.guard';
 
 export function RequireAdmin() {
-  return applyDecorators(
-    UseGuards(AdminGuard),
-    ApiSecurity('admin-password'),
-  );
+  return applyDecorators(UseGuards(AdminGuard), ApiSecurity('admin-password'));
 }

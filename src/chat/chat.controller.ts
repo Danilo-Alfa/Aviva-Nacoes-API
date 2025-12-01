@@ -55,7 +55,9 @@ export class ChatController {
   @Post('limpar')
   @RequireApiKey()
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Limpa todas as mensagens do chat (para automação)' })
+  @ApiOperation({
+    summary: 'Limpa todas as mensagens do chat (para automação)',
+  })
   @ApiResponse({
     status: 204,
     description: 'Chat limpo com sucesso',
