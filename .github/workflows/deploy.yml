@@ -29,10 +29,10 @@ jobs:
         run: ./node_modules/.bin/eslint "{src,apps,libs,test}/**/*.ts" --fix
 
       - name: Run tests
-        run: npm run test
+        run: ./node_modules/.bin/jest
 
       - name: Build
-        run: npm run build
+        run: ./node_modules/.bin/nest build
 
   deploy:
     needs: build
@@ -50,10 +50,10 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --include=dev
 
       - name: Build
-        run: npm run build
+        run: ./node_modules/.bin/nest build
 
       # =============================================
       # OPÇÃO 1: Deploy para Railway
