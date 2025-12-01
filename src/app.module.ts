@@ -8,6 +8,7 @@ import { ChatModule } from './chat/chat.module';
 import { ViewersModule } from './viewers/viewers.module';
 import { AuthModule } from './auth/auth.module';
 import { VersiculosModule } from './versiculos/versiculos.module';
+import { JornaisModule } from './jornais/jornais.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { VersiculosModule } from './versiculos/versiculos.module';
     ChatModule,
     ViewersModule,
     VersiculosModule,
+    JornaisModule,
   ],
   controllers: [AppController],
   providers: [AppService],
