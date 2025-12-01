@@ -6,6 +6,8 @@ import express, { Request, Response } from 'express';
 
 const server = express();
 
+let appPromise: Promise<void> | null = null;
+
 const createNestServer = async (expressInstance: express.Express) => {
   const app = await NestFactory.create(
     AppModule,
@@ -27,11 +29,16 @@ const createNestServer = async (expressInstance: express.Express) => {
   app.setGlobalPrefix('api');
 
   await app.init();
-  return app;
 };
 
-createNestServer(server);
+const bootstrap = () => {
+  if (!appPromise) {
+    appPromise = createNestServer(server);
+  }
+  return appPromise;
+};
 
-export default (req: Request, res: Response) => {
+export default async (req: Request, res: Response) => {
+  await bootstrap();
   server(req, res);
 };
