@@ -2,16 +2,9 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
-import { INestApplication } from '@nestjs/common';
 
-let app: INestApplication;
-
-async function createApp(): Promise<INestApplication> {
-  if (app) {
-    return app;
-  }
-
-  app = await NestFactory.create(AppModule);
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
 
   // Habilitar CORS
   app.enableCors({
@@ -53,27 +46,11 @@ async function createApp(): Promise<INestApplication> {
     SwaggerModule.setup('docs', app, document);
   }
 
-  return app;
-}
-
-async function bootstrap() {
-  const app = await createApp();
   const port = process.env.PORT || 3001;
   await app.listen(port);
 
-  console.log(`🚀 Servidor rodando em http://localhost:${port}`);
-  console.log(`📚 Documentação: http://localhost:${port}/docs`);
+  console.log(`Servidor rodando em http://localhost:${port}`);
+  console.log(`Documentacao: http://localhost:${port}/docs`);
 }
 
-// Para Vercel Serverless
-export default async function handler(req: any, res: any) {
-  const app = await createApp();
-  await app.init();
-  const expressApp = app.getHttpAdapter().getInstance();
-  return expressApp(req, res);
-}
-
-// Para execução local
-if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
-  bootstrap();
-}
+bootstrap();
