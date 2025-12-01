@@ -26,7 +26,7 @@ jobs:
         run: npm ci
 
       - name: Run linter
-        run: npm run lint
+        run: npx eslint "{src,apps,libs,test}/**/*.ts" --fix
 
       - name: Run tests
         run: npm run test
