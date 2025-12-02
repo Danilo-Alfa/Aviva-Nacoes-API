@@ -69,6 +69,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     const { sessionId, nome, email } = data;
 
+    console.log(`[CHAT] Join recebido - sessionId: ${sessionId}, nome: ${nome}`);
+
     // Armazenar dados do usuário
     this.connectedUsers.set(client.id, {
       sessionId,
@@ -131,6 +133,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.emit('erro', { message: 'Erro ao enviar mensagem' });
       return;
     }
+
+    console.log(`[CHAT] Mensagem salva - session_id: ${novaMensagem.session_id}, nome: ${novaMensagem.nome}`);
 
     // Emitir mensagem para todos os clientes conectados
     this.server.emit('mensagem', novaMensagem);

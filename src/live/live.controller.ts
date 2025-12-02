@@ -7,14 +7,13 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiHeader } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { LiveService } from './live.service';
 import {
   LiveConfigDto,
   UpdateLiveConfigDto,
   IniciarLiveDto,
 } from './dto/live-config.dto';
-import { RequireApiKey } from '../auth/decorators/api-key.decorator';
 import { RequireAdmin } from '../auth/decorators/admin.decorator';
 
 @ApiTags('live')
@@ -56,9 +55,9 @@ export class LiveController {
   }
 
   @Post('iniciar')
-  @RequireApiKey()
+  @RequireAdmin()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Inicia a transmissão ao vivo (para automação)' })
+  @ApiOperation({ summary: 'Inicia a transmissão ao vivo (admin)' })
   @ApiResponse({
     status: 200,
     description: 'Live iniciada com sucesso',
@@ -69,9 +68,9 @@ export class LiveController {
   }
 
   @Post('parar')
-  @RequireApiKey()
+  @RequireAdmin()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Para a transmissão ao vivo (para automação)' })
+  @ApiOperation({ summary: 'Para a transmissão ao vivo (admin)' })
   @ApiResponse({
     status: 200,
     description: 'Live parada com sucesso',
