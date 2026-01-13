@@ -101,6 +101,17 @@ const bootstrap = () => {
 };
 
 export default async (req: Request, res: Response) => {
+  // Tratar requisições preflight (OPTIONS) antes do NestJS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-api-key, x-admin-password');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
   await bootstrap();
   server(req, res);
 };
