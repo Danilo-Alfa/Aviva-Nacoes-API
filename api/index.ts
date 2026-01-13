@@ -17,7 +17,9 @@ const createNestServer = async (expressInstance: express.Express) => {
   );
 
   app.enableCors({
-    origin: process.env.FRONTEND_URL || '*',
+    origin: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key', 'x-admin-password'],
     credentials: true,
   });
 
