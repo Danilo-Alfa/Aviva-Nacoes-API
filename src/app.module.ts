@@ -9,6 +9,7 @@ import { ViewersModule } from './viewers/viewers.module';
 import { AuthModule } from './auth/auth.module';
 import { VersiculosModule } from './versiculos/versiculos.module';
 import { JornaisModule } from './jornais/jornais.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { JornaisModule } from './jornais/jornais.module';
     ViewersModule,
     VersiculosModule,
     JornaisModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

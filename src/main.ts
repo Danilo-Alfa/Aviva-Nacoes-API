@@ -41,6 +41,7 @@ async function bootstrap() {
       .addTag('live', 'Endpoints para gerenciamento da transmissão ao vivo')
       .addTag('chat', 'Endpoints para chat da live')
       .addTag('viewers', 'Endpoints para gerenciamento de viewers')
+      .addTag('notifications', 'Endpoints para push notifications')
       .addTag('automation', 'Endpoints para automações externas')
       .build();
 

@@ -1,12 +1,18 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { UpdateLiveConfigDto, IniciarLiveDto } from './dto/live-config.dto';
 
 const LIVE_CONFIG_ID = 'c0000000-0000-0000-0000-000000000001';
 
 @Injectable()
 export class LiveService {
-  constructor(private supabaseService: SupabaseService) {}
+  private readonly logger = new Logger(LiveService.name);
+
+  constructor(
+    private supabaseService: SupabaseService,
+    private notificationsService: NotificationsService,
+  ) {}
 
   async getConfig() {
     const { data, error } = await this.supabaseService
@@ -74,6 +80,18 @@ export class LiveService {
     if (error) {
       throw error;
     }
+
+    // Enviar push notification para todos os dispositivos
+    this.notificationsService
+      .sendLiveStartedNotification(dto.titulo, dto.descricao)
+      .then((result) => {
+        this.logger.log(
+          `Push notifications enviadas: ${result.enviados} sucesso, ${result.falhas} falhas`,
+        );
+      })
+      .catch((err) => {
+        this.logger.error('Erro ao enviar push notifications:', err);
+      });
 
     return data;
   }
