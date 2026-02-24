@@ -10,6 +10,7 @@ import { AuthModule } from './auth/auth.module';
 import { VersiculosModule } from './versiculos/versiculos.module';
 import { JornaisModule } from './jornais/jornais.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { ContatoModule } from './contato/contato.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     VersiculosModule,
     JornaisModule,
     NotificationsModule,
+    ContatoModule,
   ],
   controllers: [AppController],
   providers: [AppService],
