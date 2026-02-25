@@ -34,10 +34,12 @@ export class ContatoService {
       throw error;
     }
 
-    // Enviar notificação no Telegram (não bloqueia a resposta)
-    this.enviarNotificacaoTelegram(dto).catch((err) => {
+    // Enviar notificação no Telegram (aguarda antes de retornar - necessário em serverless)
+    try {
+      await this.enviarNotificacaoTelegram(dto);
+    } catch (err) {
       this.logger.error('Erro ao enviar notificação Telegram:', err);
-    });
+    }
 
     return data;
   }
@@ -55,15 +57,15 @@ export class ContatoService {
     }
 
     const texto = [
-      '📩 *Nova mensagem no Fale Conosco*',
+      '📩 Nova mensagem no Fale Conosco',
       '',
-      `*Nome:* ${this.escaparMarkdown(dto.nome)}`,
-      `*E\\-mail:* ${this.escaparMarkdown(dto.email)}`,
-      `*Telefone:* ${this.escaparMarkdown(dto.telefone || 'Não informado')}`,
-      `*Assunto:* ${this.escaparMarkdown(dto.assunto)}`,
+      `Nome: ${dto.nome}`,
+      `E-mail: ${dto.email}`,
+      `Telefone: ${dto.telefone || 'Não informado'}`,
+      `Assunto: ${dto.assunto}`,
       '',
-      `*Mensagem:*`,
-      this.escaparMarkdown(dto.mensagem),
+      `Mensagem:`,
+      dto.mensagem,
     ].join('\n');
 
     const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
@@ -74,7 +76,6 @@ export class ContatoService {
       body: JSON.stringify({
         chat_id: chatId,
         text: texto,
-        parse_mode: 'MarkdownV2',
       }),
     });
 
@@ -84,10 +85,5 @@ export class ContatoService {
     }
 
     this.logger.log('Notificação Telegram enviada com sucesso');
-  }
-
-  // ─── Escapar caracteres especiais do MarkdownV2 ────────
-  private escaparMarkdown(text: string): string {
-    return text.replace(/[_*\[\]()~`>#+\-=|{}.!]/g, '\\$&');
   }
 }
