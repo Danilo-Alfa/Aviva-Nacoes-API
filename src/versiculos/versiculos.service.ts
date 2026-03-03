@@ -9,14 +9,15 @@ export class VersiculosService {
    * Cria um novo versículo (para automação via n8n)
    * A data é definida automaticamente como a data atual
    */
-  async criar(url: string) {
+  async criar(urlImagem: string, urlPost?: string) {
     const hoje = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
     const { data, error } = await this.supabase
       .getClient()
       .from('versiculos')
       .insert({
-        url_post: url,
+        url_imagem: urlImagem,
+        url_post: urlPost || '',
         titulo: null,
         data: hoje,
         ativo: true,
@@ -28,7 +29,37 @@ export class VersiculosService {
       throw new Error(`Erro ao criar versículo: ${error.message}`);
     }
 
+    // Limpa versículos antigos, mantendo apenas os 5 mais recentes
+    await this.limparAntigos();
+
     return data;
+  }
+
+  /**
+   * Remove versículos antigos, mantendo apenas os 5 mais recentes (dia + 4 anteriores)
+   */
+  private async limparAntigos() {
+    // Busca os 5 mais recentes para saber o corte
+    const { data: recentes } = await this.supabase
+      .getClient()
+      .from('versiculos')
+      .select('id, data')
+      .order('data', { ascending: false })
+      .limit(5);
+
+    if (!recentes || recentes.length < 5) return;
+
+    const idsParaManter = recentes.map((v) => v.id);
+
+    const { error } = await this.supabase
+      .getClient()
+      .from('versiculos')
+      .delete()
+      .not('id', 'in', `(${idsParaManter.join(',')})`);
+
+    if (error) {
+      console.error('Erro ao limpar versículos antigos:', error.message);
+    }
   }
 
   /**
@@ -54,7 +85,7 @@ export class VersiculosService {
   /**
    * Busca versículos anteriores (exceto o mais recente)
    */
-  async getVersiculosAnteriores(limit: number = 6) {
+  async getVersiculosAnteriores(limit: number = 4) {
     const { data, error } = await this.supabase
       .getClient()
       .from('versiculos')
@@ -92,6 +123,7 @@ export class VersiculosService {
    */
   async atualizar(
     id: string,
+    urlImagem: string,
     urlPost: string,
     titulo: string | null,
     dataVersiculo: string,
@@ -100,6 +132,7 @@ export class VersiculosService {
       .getClient()
       .from('versiculos')
       .update({
+        url_imagem: urlImagem,
         url_post: urlPost,
         titulo,
         data: dataVersiculo,

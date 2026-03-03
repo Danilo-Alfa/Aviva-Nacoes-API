@@ -35,7 +35,7 @@ export class VersiculosController {
     type: VersiculoDto,
   })
   async criar(@Body() dto: CriarVersiculoDto) {
-    return this.versiculosService.criar(dto.url);
+    return this.versiculosService.criar(dto.url_imagem, dto.url_post);
   }
 
   @Get('hoje')
@@ -54,7 +54,7 @@ export class VersiculosController {
   @ApiQuery({
     name: 'limit',
     required: false,
-    description: 'Limite de resultados (padrão: 6)',
+    description: 'Limite de resultados (padrão: 4)',
   })
   @ApiResponse({
     status: 200,
@@ -62,7 +62,7 @@ export class VersiculosController {
     type: [VersiculoDto],
   })
   async getVersiculosAnteriores(@Query('limit') limit?: string) {
-    const limitNumber = limit ? parseInt(limit, 10) : 6;
+    const limitNumber = limit ? parseInt(limit, 10) : 4;
     return this.versiculosService.getVersiculosAnteriores(limitNumber);
   }
 
@@ -89,10 +89,11 @@ export class VersiculosController {
   })
   async atualizar(
     @Param('id') id: string,
-    @Body() body: { url_post: string; titulo: string | null; data: string },
+    @Body() body: { url_imagem: string; url_post: string; titulo: string | null; data: string },
   ) {
     return this.versiculosService.atualizar(
       id,
+      body.url_imagem,
       body.url_post,
       body.titulo,
       body.data,
