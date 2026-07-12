@@ -149,10 +149,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     const { mensagemId, adminPassword } = data;
 
-    // Verificar senha de admin
+    // Verificar senha de admin (fail-closed: sem env configurada, nega tudo —
+    // senao remover ADMIN_PASSWORD liberaria undefined === undefined)
     const validPassword = this.configService.get<string>('ADMIN_PASSWORD');
 
-    if (adminPassword !== validPassword) {
+    if (!validPassword || adminPassword !== validPassword) {
       client.emit('erro', { message: 'Não autorizado' });
       return;
     }
@@ -177,9 +178,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     const { adminPassword } = data;
 
+    // Fail-closed: sem env configurada, nega tudo
     const validPassword = this.configService.get<string>('ADMIN_PASSWORD');
 
-    if (adminPassword !== validPassword) {
+    if (!validPassword || adminPassword !== validPassword) {
       client.emit('erro', { message: 'Não autorizado' });
       return;
     }
