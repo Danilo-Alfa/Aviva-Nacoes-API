@@ -12,6 +12,8 @@ export interface IdentidadeChat {
   nome: string;
   email: string | null;
   avatarUrl: string | null;
+  /** Admin do painel (profiles.role = 'admin'): pode apagar e bloquear. */
+  admin: boolean;
 }
 
 const TAMANHO_MAXIMO_NOME = 100;
@@ -48,7 +50,28 @@ export class IdentidadeChatService {
       nome: this.extrairNome(metadados, user.email),
       email: user.email ?? null,
       avatarUrl: this.texto(metadados.avatar_url) ?? this.texto(metadados.picture),
+      admin: await this.ehAdmin(user.id),
     };
+  }
+
+  /**
+   * Mesma regra do painel: role 'admin' na tabela profiles. Quem entra pelo
+   * login de admin e vai para a live ja chega com os controles na mao.
+   */
+  private async ehAdmin(userId: string): Promise<boolean> {
+    const { data, error } = await this.supabaseService
+      .getClient()
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.warn(`Nao foi possivel conferir a role de ${userId}: ${error.message}`);
+      return false;
+    }
+
+    return data?.role === 'admin';
   }
 
   private extrairNome(metadados: Record<string, unknown>, email?: string): string {

@@ -75,14 +75,22 @@ export class DeletarMensagemDto {
   @ApiProperty({ description: 'ID da mensagem' })
   @IsString()
   mensagemId: string;
-
-  @ApiProperty({ description: 'Senha de admin' })
-  @IsString()
-  adminPassword: string;
 }
 
-export class LimparChatDto {
-  @ApiProperty({ description: 'Senha de admin' })
+export class BloquearUsuarioDto {
+  @ApiProperty({ description: 'Conta a bloquear ou desbloquear' })
   @IsString()
-  adminPassword: string;
+  userId: string;
+
+  @ApiPropertyOptional({ description: 'Nome de quem esta sendo bloqueado, para o registro' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  nome?: string;
+
+  @ApiPropertyOptional({ description: 'Motivo do bloqueio' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  motivo?: string;
 }

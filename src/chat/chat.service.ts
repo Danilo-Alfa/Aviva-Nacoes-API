@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 
 export interface ChatMessage {
@@ -25,9 +25,78 @@ export interface NovaMensagem {
   mensagem: string;
 }
 
+export interface BloqueioChat {
+  userId: string;
+  nome: string | null;
+  email: string | null;
+  motivo: string | null;
+  bloqueadoPor: string;
+}
+
 @Injectable()
 export class ChatService {
+  private readonly logger = new Logger(ChatService.name);
+
   constructor(private supabaseService: SupabaseService) {}
+
+  /**
+   * Conta impedida de escrever. Falha aberta de proposito: se a tabela ainda
+   * nao existe (SQL de moderacao nao rodou), o chat continua funcionando em vez
+   * de derrubar todo mundo — o log avisa.
+   */
+  async estaBloqueado(userId: string): Promise<boolean> {
+    const { data, error } = await this.supabaseService
+      .getClient()
+      .from('live_chat_bloqueios')
+      .select('user_id')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.warn(`Nao foi possivel conferir bloqueio de ${userId}: ${error.message}`);
+      return false;
+    }
+
+    return !!data;
+  }
+
+  async bloquear(bloqueio: BloqueioChat): Promise<boolean> {
+    const { error } = await this.supabaseService
+      .getClient()
+      .from('live_chat_bloqueios')
+      .upsert(
+        {
+          user_id: bloqueio.userId,
+          nome: bloqueio.nome,
+          email: bloqueio.email,
+          motivo: bloqueio.motivo,
+          bloqueado_por: bloqueio.bloqueadoPor,
+        },
+        { onConflict: 'user_id' },
+      );
+
+    if (error) {
+      this.logger.error(`Erro ao bloquear ${bloqueio.userId}: ${error.message}`);
+      return false;
+    }
+
+    return true;
+  }
+
+  async desbloquear(userId: string): Promise<boolean> {
+    const { error } = await this.supabaseService
+      .getClient()
+      .from('live_chat_bloqueios')
+      .delete()
+      .eq('user_id', userId);
+
+    if (error) {
+      this.logger.error(`Erro ao desbloquear ${userId}: ${error.message}`);
+      return false;
+    }
+
+    return true;
+  }
 
   async getMensagens(limit = 50): Promise<ChatMessage[]> {
     const { data, error } = await this.supabaseService

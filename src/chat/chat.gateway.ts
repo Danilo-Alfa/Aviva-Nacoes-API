@@ -16,7 +16,7 @@ import {
   JoinChatDto,
   NovaMensagemDto,
   DeletarMensagemDto,
-  LimparChatDto,
+  BloquearUsuarioDto,
 } from './dto/chat.dto';
 
 /**
@@ -32,6 +32,8 @@ interface UsuarioConectado {
   userId: string | null;
   avatarUrl: string | null;
   verificado: boolean;
+  admin: boolean;
+  bloqueado: boolean;
   entrouEm: Date;
 }
 
@@ -110,6 +112,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const { sessionId, token } = data;
 
     const identidade = await this.identidadeService.resolver(token);
+    const bloqueado = identidade ? await this.chatService.estaBloqueado(identidade.userId) : false;
 
     // Token enviado mas recusado: a sessao expirou ou foi adulterada. O cliente
     // precisa saber para pedir login de novo em vez de achar que esta escrevendo.
@@ -122,11 +125,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const usuario: UsuarioConectado = identidade
       ? {
           sessionId,
-          nome: identidade.nome,
+          // Bloqueado entra como espectador: continua vendo a live e lendo.
+          nome: bloqueado ? null : identidade.nome,
           email: identidade.email,
           userId: identidade.userId,
           avatarUrl: identidade.avatarUrl,
           verificado: true,
+          admin: identidade.admin,
+          bloqueado,
           entrouEm: new Date(),
         }
       : {
@@ -136,6 +142,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           userId: null,
           avatarUrl: null,
           verificado: false,
+          admin: false,
+          bloqueado: false,
           entrouEm: new Date(),
         };
 
@@ -147,10 +155,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // Devolve a identidade que o servidor assumiu, para a tela mostrar a verdade
     client.emit('identidade', {
-      nome: usuario.nome,
+      nome: usuario.nome ?? identidade?.nome ?? null,
       email: usuario.email,
       avatarUrl: usuario.avatarUrl,
       verificado: usuario.verificado,
+      admin: usuario.admin,
+      bloqueado: usuario.bloqueado,
       podeEscrever: usuario.nome !== null,
     });
 
@@ -178,6 +188,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     if (!user) {
       client.emit('erro', { message: 'Usuário não autenticado no chat' });
+      return;
+    }
+
+    if (user.bloqueado) {
+      client.emit('erro', {
+        message: 'Sua conta esta impedida de enviar mensagens neste chat.',
+      });
       return;
     }
 
@@ -232,18 +249,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() data: DeletarMensagemDto,
   ) {
-    const { mensagemId, adminPassword } = data;
-
-    // Verificar senha de admin (fail-closed: sem env configurada, nega tudo —
-    // senao remover ADMIN_PASSWORD liberaria undefined === undefined)
-    const validPassword = this.configService.get<string>('ADMIN_PASSWORD');
-
-    if (!validPassword || adminPassword !== validPassword) {
-      client.emit('erro', { message: 'Não autorizado' });
+    if (!this.ehAdmin(client)) {
+      client.emit('erro', { message: 'Apenas administradores podem apagar mensagens.' });
       return;
     }
 
-    const success = await this.chatService.deletarMensagem(mensagemId);
+    const success = await this.chatService.deletarMensagem(data.mensagemId);
 
     if (!success) {
       client.emit('erro', { message: 'Erro ao deletar mensagem' });
@@ -251,23 +262,15 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     // Notificar todos que a mensagem foi deletada
-    this.server.emit('mensagem_deletada', { mensagemId });
+    this.server.emit('mensagem_deletada', { mensagemId: data.mensagemId });
 
     return { success: true };
   }
 
   @SubscribeMessage('limpar_chat')
-  async handleLimparChat(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() data: LimparChatDto,
-  ) {
-    const { adminPassword } = data;
-
-    // Fail-closed: sem env configurada, nega tudo
-    const validPassword = this.configService.get<string>('ADMIN_PASSWORD');
-
-    if (!validPassword || adminPassword !== validPassword) {
-      client.emit('erro', { message: 'Não autorizado' });
+  async handleLimparChat(@ConnectedSocket() client: Socket) {
+    if (!this.ehAdmin(client)) {
+      client.emit('erro', { message: 'Apenas administradores podem limpar o chat.' });
       return;
     }
 
@@ -279,6 +282,71 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     this.server.emit('chat_limpo');
+
+    return { success: true };
+  }
+
+  @SubscribeMessage('bloquear_usuario')
+  async handleBloquearUsuario(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: BloquearUsuarioDto,
+  ) {
+    const admin = this.connectedUsers.get(client.id);
+
+    if (!admin?.admin || !admin.userId) {
+      client.emit('erro', { message: 'Apenas administradores podem bloquear alguem.' });
+      return;
+    }
+
+    if (data.userId === admin.userId) {
+      client.emit('erro', { message: 'Voce nao pode bloquear a si mesmo.' });
+      return;
+    }
+
+    const alvo = this.encontrarPorUsuario(data.userId);
+
+    if (alvo?.admin) {
+      client.emit('erro', { message: 'Nao da para bloquear outro administrador.' });
+      return;
+    }
+
+    const sucesso = await this.chatService.bloquear({
+      userId: data.userId,
+      nome: alvo?.nome ?? data.nome ?? null,
+      email: alvo?.email ?? null,
+      motivo: data.motivo ?? null,
+      bloqueadoPor: admin.userId,
+    });
+
+    if (!sucesso) {
+      client.emit('erro', { message: 'Erro ao bloquear. Tente de novo.' });
+      return;
+    }
+
+    this.aplicarBloqueio(data.userId);
+    client.emit('bloqueio_aplicado', { userId: data.userId });
+
+    return { success: true };
+  }
+
+  @SubscribeMessage('desbloquear_usuario')
+  async handleDesbloquearUsuario(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: BloquearUsuarioDto,
+  ) {
+    if (!this.ehAdmin(client)) {
+      client.emit('erro', { message: 'Apenas administradores podem desbloquear alguem.' });
+      return;
+    }
+
+    const sucesso = await this.chatService.desbloquear(data.userId);
+
+    if (!sucesso) {
+      client.emit('erro', { message: 'Erro ao desbloquear. Tente de novo.' });
+      return;
+    }
+
+    client.emit('bloqueio_removido', { userId: data.userId });
 
     return { success: true };
   }
@@ -306,6 +374,35 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   getUsersOnline(): number {
     return this.connectedUsers.size;
+  }
+
+  private ehAdmin(client: Socket): boolean {
+    return this.connectedUsers.get(client.id)?.admin === true;
+  }
+
+  private encontrarPorUsuario(userId: string): UsuarioConectado | undefined {
+    return [...this.connectedUsers.values()].find((usuario) => usuario.userId === userId);
+  }
+
+  /**
+   * Corta o direito de escrever na hora, sem esperar a pessoa recarregar: quem
+   * ja esta conectado com aquela conta vira espectador na mesma sessao.
+   */
+  private aplicarBloqueio(userId: string): void {
+    for (const [socketId, usuario] of this.connectedUsers) {
+      if (usuario.userId !== userId) continue;
+
+      this.connectedUsers.set(socketId, { ...usuario, nome: null, bloqueado: true });
+      this.server.to(socketId).emit('identidade', {
+        nome: usuario.nome,
+        email: usuario.email,
+        avatarUrl: usuario.avatarUrl,
+        verificado: usuario.verificado,
+        admin: usuario.admin,
+        bloqueado: true,
+        podeEscrever: false,
+      });
+    }
   }
 
   /**
