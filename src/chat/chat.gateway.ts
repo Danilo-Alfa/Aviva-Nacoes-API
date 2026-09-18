@@ -38,9 +38,32 @@ interface UsuarioConectado {
 const TAMANHO_MAXIMO_MENSAGEM = 500;
 const TAMANHO_MAXIMO_NOME = 100;
 
+/**
+ * Origens aceitas pelo socket.
+ *
+ * FRONTEND_URL aceita varias separadas por virgula. Sem ela, reflete a origem
+ * de quem chama: o padrao antigo era 'http://localhost:5173', o que derrubava
+ * o transporte polling em producao (o navegador bloqueia por CORS) e deixava o
+ * chat dependendo so do websocket — quando a rede do visitante nao permite o
+ * upgrade, sobrava "Nao foi possivel conectar ao chat". Nao ha risco de CSRF
+ * aqui porque a identidade vem de um token no payload, nunca de cookie.
+ */
+function origensPermitidas(): string[] | boolean {
+  const configurado = process.env.FRONTEND_URL?.trim();
+
+  if (!configurado) {
+    return true;
+  }
+
+  return configurado
+    .split(',')
+    .map((origem) => origem.trim())
+    .filter((origem) => origem.length > 0);
+}
+
 @WebSocketGateway({
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: origensPermitidas(),
     credentials: true,
   },
   namespace: '/chat',
