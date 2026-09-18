@@ -10,6 +10,8 @@ import {
 import { Server, Socket } from 'socket.io';
 import { ConfigService } from '@nestjs/config';
 import { ChatService } from './chat.service';
+import { IdentidadeChatService } from './identidade.service';
+import { LimiteDeMensagens } from './limite-mensagens';
 import {
   JoinChatDto,
   NovaMensagemDto,
@@ -17,12 +19,24 @@ import {
   LimparChatDto,
 } from './dto/chat.dto';
 
-interface ConnectedUser {
+/**
+ * Usuario conectado ao chat.
+ *
+ * `nome` nulo significa espectador: le o chat, mas nao escreve. Quem entra com
+ * o Google chega com `verificado: true` e todos os dados vindos do Supabase.
+ */
+interface UsuarioConectado {
   sessionId: string;
-  nome: string;
-  email?: string;
-  joinedAt: Date;
+  nome: string | null;
+  email: string | null;
+  userId: string | null;
+  avatarUrl: string | null;
+  verificado: boolean;
+  entrouEm: Date;
 }
+
+const TAMANHO_MAXIMO_MENSAGEM = 500;
+const TAMANHO_MAXIMO_NOME = 100;
 
 @WebSocketGateway({
   cors: {
@@ -35,11 +49,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
-  private connectedUsers = new Map<string, ConnectedUser>();
+  private connectedUsers = new Map<string, UsuarioConectado>();
+  private limite = new LimiteDeMensagens();
 
   constructor(
     private chatService: ChatService,
     private configService: ConfigService,
+    private identidadeService: IdentidadeChatService,
   ) {}
 
   handleConnection(client: Socket) {
@@ -49,7 +65,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   handleDisconnect(client: Socket) {
     const user = this.connectedUsers.get(client.id);
 
-    if (user) {
+    if (user?.nome) {
       this.server.emit('user_left', {
         nome: user.nome,
         timestamp: new Date().toISOString(),
@@ -57,6 +73,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     this.connectedUsers.delete(client.id);
+    this.limite.esquecer(client.id);
     this.server.emit('users_online', this.connectedUsers.size);
 
     console.log(`Cliente desconectado: ${client.id}`);
@@ -67,30 +84,64 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() data: JoinChatDto,
   ) {
-    const { sessionId, nome, email } = data;
+    const { sessionId, token } = data;
 
-    console.log(`[CHAT] Join recebido - sessionId: ${sessionId}, nome: ${nome}`);
+    const identidade = await this.identidadeService.resolver(token);
 
-    // Armazenar dados do usuário
-    this.connectedUsers.set(client.id, {
-      sessionId,
-      nome: nome || 'Anônimo',
-      email,
-      joinedAt: new Date(),
+    // Token enviado mas recusado: a sessao expirou ou foi adulterada. O cliente
+    // precisa saber para pedir login de novo em vez de achar que esta escrevendo.
+    if (token && !identidade) {
+      client.emit('sessao_invalida', {
+        message: 'Sua sessao expirou. Entre novamente para participar do chat.',
+      });
+    }
+
+    const usuario: UsuarioConectado = identidade
+      ? {
+          sessionId,
+          nome: identidade.nome,
+          email: identidade.email,
+          userId: identidade.userId,
+          avatarUrl: identidade.avatarUrl,
+          verificado: true,
+          entrouEm: new Date(),
+        }
+      : {
+          sessionId,
+          nome: this.nomeLegado(data.nome),
+          email: data.email ?? null,
+          userId: null,
+          avatarUrl: null,
+          verificado: false,
+          entrouEm: new Date(),
+        };
+
+    this.connectedUsers.set(client.id, usuario);
+
+    console.log(
+      `[CHAT] Join - sessionId: ${sessionId}, nome: ${usuario.nome ?? '(espectador)'}, verificado: ${usuario.verificado}`,
+    );
+
+    // Devolve a identidade que o servidor assumiu, para a tela mostrar a verdade
+    client.emit('identidade', {
+      nome: usuario.nome,
+      email: usuario.email,
+      avatarUrl: usuario.avatarUrl,
+      verificado: usuario.verificado,
+      podeEscrever: usuario.nome !== null,
     });
 
-    // Emitir atualização de usuários online
     this.server.emit('users_online', this.connectedUsers.size);
 
-    // Carregar últimas mensagens
     const mensagens = await this.chatService.getMensagens(50);
     client.emit('mensagens_anteriores', mensagens);
 
-    // Notificar que alguém entrou
-    client.broadcast.emit('user_joined', {
-      nome: nome || 'Anônimo',
-      timestamp: new Date().toISOString(),
-    });
+    if (usuario.nome) {
+      client.broadcast.emit('user_joined', {
+        nome: usuario.nome,
+        timestamp: new Date().toISOString(),
+      });
+    }
 
     return { success: true };
   }
@@ -107,36 +158,47 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    const { mensagem } = data;
-
-    // Validar mensagem
-    if (!mensagem || mensagem.trim().length === 0) {
-      return;
-    }
-
-    if (mensagem.length > 500) {
+    if (!user.nome) {
       client.emit('erro', {
-        message: 'Mensagem muito longa (máx. 500 caracteres)',
+        message: 'Entre com o Google para enviar mensagens no chat.',
       });
       return;
     }
 
-    // Salvar no banco
-    const novaMensagem = await this.chatService.criarMensagem(
-      user.sessionId,
-      user.nome,
-      user.email || null,
-      mensagem.trim(),
-    );
+    const { mensagem } = data;
+
+    if (!mensagem || mensagem.trim().length === 0) {
+      return;
+    }
+
+    if (mensagem.length > TAMANHO_MAXIMO_MENSAGEM) {
+      client.emit('erro', {
+        message: `Mensagem muito longa (máx. ${TAMANHO_MAXIMO_MENSAGEM} caracteres)`,
+      });
+      return;
+    }
+
+    const permissao = this.limite.registrar(client.id);
+
+    if (!permissao.permitido) {
+      client.emit('erro', { message: permissao.motivo });
+      return;
+    }
+
+    const novaMensagem = await this.chatService.criarMensagem({
+      sessionId: user.sessionId,
+      nome: user.nome,
+      email: user.email,
+      userId: user.userId,
+      avatarUrl: user.avatarUrl,
+      mensagem: mensagem.trim(),
+    });
 
     if (!novaMensagem) {
       client.emit('erro', { message: 'Erro ao enviar mensagem' });
       return;
     }
 
-    console.log(`[CHAT] Mensagem salva - session_id: ${novaMensagem.session_id}, nome: ${novaMensagem.nome}`);
-
-    // Emitir mensagem para todos os clientes conectados
     this.server.emit('mensagem', novaMensagem);
 
     return { success: true };
@@ -201,7 +263,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('digitando')
   handleDigitando(@ConnectedSocket() client: Socket) {
     const user = this.connectedUsers.get(client.id);
-    if (user) {
+    if (user?.nome) {
       client.broadcast.emit('usuario_digitando', { nome: user.nome });
     }
   }
@@ -209,7 +271,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('parou_digitar')
   handleParouDigitar(@ConnectedSocket() client: Socket) {
     const user = this.connectedUsers.get(client.id);
-    if (user) {
+    if (user?.nome) {
       client.broadcast.emit('usuario_parou_digitar', { nome: user.nome });
     }
   }
@@ -221,5 +283,19 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   getUsersOnline(): number {
     return this.connectedUsers.size;
+  }
+
+  /**
+   * Caminho de transicao: o aplicativo ainda envia nome digitado, sem token.
+   * Com CHAT_EXIGIR_LOGIN=true esse caminho fecha e so entra quem tem conta.
+   */
+  private nomeLegado(nome?: string): string | null {
+    if (this.configService.get<string>('CHAT_EXIGIR_LOGIN') === 'true') {
+      return null;
+    }
+
+    const limpo = nome?.trim().slice(0, TAMANHO_MAXIMO_NOME);
+
+    return limpo && limpo.length > 0 ? limpo : null;
   }
 }

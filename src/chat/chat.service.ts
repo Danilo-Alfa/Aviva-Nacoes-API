@@ -6,8 +6,23 @@ export interface ChatMessage {
   session_id: string;
   nome: string;
   email: string | null;
+  user_id: string | null;
+  avatar_url: string | null;
   mensagem: string;
   created_at: string;
+}
+
+/**
+ * Dados de uma mensagem nova. Nome, e-mail e foto vem da identidade resolvida
+ * no gateway, nunca do que o cliente digitou.
+ */
+export interface NovaMensagem {
+  sessionId: string;
+  nome: string;
+  email: string | null;
+  userId: string | null;
+  avatarUrl: string | null;
+  mensagem: string;
 }
 
 @Injectable()
@@ -31,21 +46,18 @@ export class ChatService {
     return (data || []).reverse();
   }
 
-  async criarMensagem(
-    sessionId: string,
-    nome: string,
-    email: string | null,
-    mensagem: string,
-  ): Promise<ChatMessage | null> {
+  async criarMensagem(dados: NovaMensagem): Promise<ChatMessage | null> {
     const { data, error } = await this.supabaseService
       .getClient()
       .from('live_chat_mensagens')
       .insert([
         {
-          session_id: sessionId,
-          nome,
-          email,
-          mensagem,
+          session_id: dados.sessionId,
+          nome: dados.nome,
+          email: dados.email,
+          user_id: dados.userId,
+          avatar_url: dados.avatarUrl,
+          mensagem: dados.mensagem,
         },
       ])
       .select()
