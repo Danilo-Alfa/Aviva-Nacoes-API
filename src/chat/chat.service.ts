@@ -25,6 +25,13 @@ export interface NovaMensagem {
   mensagem: string;
 }
 
+export interface BloqueadoChat {
+  user_id: string;
+  nome: string | null;
+  email: string | null;
+  created_at: string;
+}
+
 export interface BloqueioChat {
   userId: string;
   nome: string | null;
@@ -81,6 +88,25 @@ export class ChatService {
     }
 
     return true;
+  }
+
+  /**
+   * Lista as contas bloqueadas, para o admin ver e desfazer. Falha aberta pelo
+   * mesmo motivo de estaBloqueado: sem a tabela, o chat segue funcionando.
+   */
+  async listarBloqueios(): Promise<BloqueadoChat[]> {
+    const { data, error } = await this.supabaseService
+      .getClient()
+      .from('live_chat_bloqueios')
+      .select('user_id, nome, email, created_at')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      this.logger.warn(`Nao foi possivel listar bloqueios: ${error.message}`);
+      return [];
+    }
+
+    return data ?? [];
   }
 
   async desbloquear(userId: string): Promise<boolean> {

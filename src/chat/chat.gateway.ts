@@ -28,6 +28,8 @@ import {
 interface UsuarioConectado {
   sessionId: string;
   nome: string | null;
+  /** Nome que a conta tem quando pode escrever, guardado para o desbloqueio. */
+  nomeVerificado: string | null;
   email: string | null;
   userId: string | null;
   avatarUrl: string | null;
@@ -127,6 +129,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           sessionId,
           // Bloqueado entra como espectador: continua vendo a live e lendo.
           nome: bloqueado ? null : identidade.nome,
+          nomeVerificado: identidade.nome,
           email: identidade.email,
           userId: identidade.userId,
           avatarUrl: identidade.avatarUrl,
@@ -138,6 +141,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       : {
           sessionId,
           nome: this.nomeLegado(data.nome),
+          nomeVerificado: this.nomeLegado(data.nome),
           email: data.email ?? null,
           userId: null,
           avatarUrl: null,
@@ -168,6 +172,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     const mensagens = await this.chatService.getMensagens(50);
     client.emit('mensagens_anteriores', mensagens);
+
+    if (usuario.admin) {
+      client.emit('bloqueios', await this.chatService.listarBloqueios());
+    }
 
     if (usuario.nome) {
       client.broadcast.emit('user_joined', {
@@ -324,7 +332,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     this.aplicarBloqueio(data.userId);
-    client.emit('bloqueio_aplicado', { userId: data.userId });
+    await this.atualizarAdmins();
 
     return { success: true };
   }
@@ -346,7 +354,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    client.emit('bloqueio_removido', { userId: data.userId });
+    this.liberarBloqueio(data.userId);
+    await this.atualizarAdmins();
 
     return { success: true };
   }
@@ -402,6 +411,39 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         bloqueado: true,
         podeEscrever: false,
       });
+    }
+  }
+
+  /**
+   * Devolve o direito de escrever na hora para quem foi desbloqueado e ainda
+   * esta com o chat aberto.
+   */
+  private liberarBloqueio(userId: string): void {
+    for (const [socketId, usuario] of this.connectedUsers) {
+      if (usuario.userId !== userId || !usuario.bloqueado) continue;
+
+      const liberado = { ...usuario, nome: usuario.nomeVerificado, bloqueado: false };
+      this.connectedUsers.set(socketId, liberado);
+      this.server.to(socketId).emit('identidade', {
+        nome: liberado.nome,
+        email: liberado.email,
+        avatarUrl: liberado.avatarUrl,
+        verificado: liberado.verificado,
+        admin: liberado.admin,
+        bloqueado: false,
+        podeEscrever: liberado.nome !== null,
+      });
+    }
+  }
+
+  /** Mantem a lista de bloqueados igual para todos os admins conectados. */
+  private async atualizarAdmins(): Promise<void> {
+    const lista = await this.chatService.listarBloqueios();
+
+    for (const [socketId, usuario] of this.connectedUsers) {
+      if (usuario.admin) {
+        this.server.to(socketId).emit('bloqueios', lista);
+      }
     }
   }
 
